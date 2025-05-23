@@ -28,6 +28,7 @@ module Network.MCP.Types
     Tool (..),
     ToolContent (..),
     ToolContentType (..),
+    ToolAnnotations (..),
 
     -- * Prompts
     Prompt (..),
@@ -768,7 +769,7 @@ data CallToolRequest = CallToolRequest
   { -- | Name of the tool to call
     callToolName :: Text,
     -- | Tool arguments
-    callToolArguments :: Map Text Value
+    callToolArguments :: Value
   }
   deriving (Show, Eq, Generic)
 

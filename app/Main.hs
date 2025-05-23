@@ -2,7 +2,7 @@
 
 module AppMain where
 
-import Data.Aeson (Value (..))
+import Data.Aeson (Value (..), fromJSON, Result(..))
 -- import System.IO (hPutStrLn, stderr)
 
 import qualified Data.Map.Strict as Map
@@ -93,8 +93,10 @@ main = do
   -- Register tool call handler
   registerToolCallHandler server $ \request -> do
     let name = callToolName request
-        args = callToolArguments request
-
+        args :: Map.Map T.Text Value
+        args = case fromJSON (callToolArguments request) of
+                  Success a -> a
+                  Error _ -> Map.empty
     -- Handle different tools
     result <- case name of
       "echo" -> do
