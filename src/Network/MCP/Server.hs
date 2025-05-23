@@ -1,39 +1,38 @@
+{-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE RecordWildCards #-}
-{-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 
 module Network.MCP.Server
-  ( Server
-  , ServerHandler
-  , ResourceReadHandler
-  , ToolCallHandler
-  , PromptHandler
-  , createServer
-  , registerResources
-  , registerResourceReadHandler
-  , registerTools
-  , registerToolCallHandler
-  , registerPrompts
-  , registerPromptHandler
-  , runServerWithTransport
-  , handleRequest
-  ) where
+  ( Server,
+    ServerHandler,
+    ResourceReadHandler,
+    ToolCallHandler,
+    PromptHandler,
+    createServer,
+    registerResources,
+    registerResourceReadHandler,
+    registerTools,
+    registerToolCallHandler,
+    registerPrompts,
+    registerPromptHandler,
+    runServerWithTransport,
+    handleRequest,
+  )
+where
 
-import System.IO
-import qualified Data.ByteString.Lazy.Char8 as BLC
 import Control.Concurrent (forkIO, threadDelay)
 import Control.Concurrent.STM
-import Control.Exception (catch,toException, SomeException, try)
+import Control.Exception (SomeException, catch, toException, try)
 import Control.Monad
 import Data.Aeson
+import qualified Data.Map.Strict as Map
 import Data.Maybe (fromMaybe)
 import Data.Text (Text)
+import qualified Data.Text as T
 import Network.MCP.Server.Types
 import Network.MCP.Transport.Types
 import Network.MCP.Types
-import qualified Data.Map.Strict as Map
-import qualified Data.Text as T
 
 createServer :: ServerInfo -> ServerCapabilities -> Text -> IO Server
 createServer info caps instructions = do
@@ -47,18 +46,19 @@ createServer info caps instructions = do
   -- Initialize message handlers map
   handlersVar <- newTVarIO Map.empty
 
-  let server = Server
-        { serverInfo = info
-        , serverCapabilities = caps
-        , serverResources = resourcesVar
-        , serverTools = toolsVar
-        , serverPrompts = promptsVar
-        , serverInstructions = instructions
-        , serverResourceReadHandler = resourceHandlerVar
-        , serverToolCallHandler = toolHandlerVar
-        , serverPromptHandler = promptHandlerVar
-        , serverMessageHandlers = handlersVar
-        }
+  let server =
+        Server
+          { serverInfo = info,
+            serverCapabilities = caps,
+            serverResources = resourcesVar,
+            serverTools = toolsVar,
+            serverPrompts = promptsVar,
+            serverInstructions = instructions,
+            serverResourceReadHandler = resourceHandlerVar,
+            serverToolCallHandler = toolHandlerVar,
+            serverPromptHandler = promptHandlerVar,
+            serverMessageHandlers = handlersVar
+          }
 
   -- Register standard request handlers
   registerInitializeHandler server
@@ -95,43 +95,49 @@ registerPrompts server prompts = atomically $ writeTVar (serverPrompts server) p
 registerPromptHandler :: Server -> PromptHandler -> IO ()
 registerPromptHandler server handler = atomically $ writeTVar (serverPromptHandler server) (Just handler)
 
-
-runServerWithTransport :: Transport t => Server -> t -> IO ()
+runServerWithTransport :: (Transport t) => Server -> t -> IO ()
 runServerWithTransport server transport = do
-  void $ forkIO (forever $ do
-    msg <- catch (readMessage transport)
-      (\(e :: SomeException) -> do
-        putStrLn $ "Error reading message: " ++ show e
-        threadDelay 1000000  -- Wait before retrying
-        readMessage transport)
-    handleMessage server transport msg)
+  void $
+    forkIO
+      ( forever $ do
+          msg <-
+            catch
+              (readMessage transport)
+              ( \(e :: SomeException) -> do
+                  putStrLn $ "Error reading message: " ++ show e
+                  threadDelay 1000000 -- Wait before retrying
+                  readMessage transport
+              )
+          handleMessage server transport msg
+      )
 
 -- Helper to process a message
-handleMessage :: Transport t => Server -> t -> Message -> IO ()
+handleMessage :: (Transport t) => Server -> t -> Message -> IO ()
 handleMessage server transport = \case
   RequestMessage request ->
     handleRequest server request >>= \case
       Right response -> void $ sendMessage transport (ResponseMessage response)
       Left err -> sendErrorResponse transport request err
-
   NotificationMessage notification ->
     void $ handleNotification server notification
-
   _ -> putStrLn "Received unexpected message type"
 
 -- Helper to send error responses
-sendErrorResponse :: Transport t => t -> Request -> SomeException -> IO ()
+sendErrorResponse :: (Transport t) => t -> Request -> SomeException -> IO ()
 sendErrorResponse transport request err = do
-  let errorResponse = Response
-        { responseJsonrpc = JSONRPC "2.0"
-        , responseId = requestId request
-        , responseResult = Nothing
-        , responseError = Just $ ErrorResponse
-            { errorCode = -32603
-            , errorMessage = T.pack $ show err
-            , errorData = Nothing
-            }
-        }
+  let errorResponse =
+        Response
+          { responseJsonrpc = JSONRPC "2.0",
+            responseId = requestId request,
+            responseResult = Nothing,
+            responseError =
+              Just $
+                ErrorResponse
+                  { errorCode = -32603,
+                    errorMessage = T.pack $ show err,
+                    errorData = Nothing
+                  }
+          }
   void $ sendMessage transport (ResponseMessage errorResponse)
 
 -- | Handle a request
@@ -145,26 +151,33 @@ handleRequest server request = do
     Just handler -> do
       e'result <- try $ handler params server
       case e'result of
-        Right value -> return $ Right $ Response
-          { responseJsonrpc = JSONRPC "2.0"
-          , responseId = requestId request
-          , responseResult = case value of
-              Left _err -> error (show _err) -- WAT?
-              Right v -> Just v
-          , responseError = Nothing
-          }
+        Right value ->
+          return $
+            Right $
+              Response
+                { responseJsonrpc = JSONRPC "2.0",
+                  responseId = requestId request,
+                  responseResult = case value of
+                    Left _err -> error (show _err) -- WAT?
+                    Right v -> Just v,
+                  responseError = Nothing
+                }
         Left err -> return $ Left err
-
-    Nothing -> return $ Right $ Response
-      { responseJsonrpc = JSONRPC "2.0"
-      , responseId = requestId request
-      , responseResult = Nothing
-      , responseError = Just $ ErrorResponse
-          { errorCode = -32601
-          , errorMessage = "Method not found"
-          , errorData = Nothing
-          }
-      }
+    Nothing ->
+      return $
+        Right $
+          Response
+            { responseJsonrpc = JSONRPC "2.0",
+              responseId = requestId request,
+              responseResult = Nothing,
+              responseError =
+                Just $
+                  ErrorResponse
+                    { errorCode = -32601,
+                      errorMessage = "Method not found",
+                      errorData = Nothing
+                    }
+            }
 
 -- | Handle a notification
 handleNotification :: Server -> Notification -> IO ()
@@ -188,15 +201,15 @@ registerInitializeHandler server = registerRequestHandler server "initialize" $ 
     Success (_clientOptions :: ClientInitializeOptions) -> do
       -- TODO: Verify protocol version compatibility
 
-      let serverOptions = ServerInitializeOptions
-            { serverInitProtocolVersion = head supportedVersions
-            , serverInitInfo = serverInfo server
-            , serverInitCapabilities = serverCapabilities server
-            , serverInitInstructions = serverInstructions server
-            }
+      let serverOptions =
+            ServerInitializeOptions
+              { serverInitProtocolVersion = head supportedVersions,
+                serverInitInfo = serverInfo server,
+                serverInitCapabilities = serverCapabilities server,
+                serverInitInstructions = serverInstructions server
+              }
 
       return $ Right $ toJSON serverOptions
-
     Error err -> return $ Left $ toException (userError $ "Invalid initialize parameters: " ++ err)
 
 -- | Register list resources handler
@@ -216,7 +229,6 @@ registerReadResourceHandler server = registerRequestHandler server "resources/re
         result <- handler req
         return $ Right $ toJSON result
       Error err -> return $ Left $ toException (userError $ "Invalid resource read parameters: " ++ err)
-
     Nothing -> return $ Left $ toException (userError "No resource read handler registered")
 
 -- | Register list tools handler
@@ -236,7 +248,6 @@ registerCallToolHandler server = registerRequestHandler server "tools/call" $ \p
         result <- handler req
         return $ Right $ toJSON result
       Error err -> return $ Left $ toException (userError $ "Invalid tool call parameters: " ++ err)
-
     Nothing -> return $ Left $ toException (userError "No tool call handler registered")
 
 -- | Register list prompts handler
@@ -256,5 +267,4 @@ registerGetPromptHandler server = registerRequestHandler server "prompts/get" $ 
         result <- handler req
         return $ Right $ toJSON result
       Error err -> return $ Left $ toException (userError $ "Invalid get prompt parameters: " ++ err)
-
     Nothing -> return $ Left $ toException (userError "No prompt handler registered")

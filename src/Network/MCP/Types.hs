@@ -1,80 +1,93 @@
-{-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE DeriveGeneric #-}
-{-# LANGUAGE StrictData #-}
-{-# LANGUAGE RecordWildCards #-}
 {-# LANGUAGE LambdaCase #-}
+{-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE RecordWildCards #-}
+{-# LANGUAGE StrictData #-}
 
 module Network.MCP.Types
   ( -- * Server Information
-    ServerInfo
-  , ClientInfo
-  , Implementation(..)
+    ServerInfo,
+    ClientInfo,
+    Implementation (..),
+
     -- * Capabilities
-  , ServerCapabilities(..)
-  , ClientCapabilities(..)
-  , ResourcesCapability(..)
-  , ToolsCapability(..)
-  , PromptsCapability(..)
-  , SamplingCapability(..)
-  , RootsCapability(..)
+    ServerCapabilities (..),
+    ClientCapabilities (..),
+    ResourcesCapability (..),
+    ToolsCapability (..),
+    PromptsCapability (..),
+    SamplingCapability (..),
+    RootsCapability (..),
+
     -- * Resources
-  , Resource(..)
-  , ResourceContent(..)
-  , ResourceContentType(..)
+    Resource (..),
+    ResourceContent (..),
+    ResourceContentType (..),
+
     -- * Tools
-  , Tool(..)
-  , ToolContent(..)
-  , ToolContentType(..)
+    Tool (..),
+    ToolContent (..),
+    ToolContentType (..),
+
     -- * Prompts
-  , Prompt(..)
-  , PromptArgument(..)
-  , PromptMessage(..)
-  , PromptContentType(..)
-  , PromptContent(..)
+    Prompt (..),
+    PromptArgument (..),
+    PromptMessage (..),
+    PromptContentType (..),
+    PromptContent (..),
+
     -- * Roots
-  , Root(..)
+    Root (..),
+
     -- * Protocol Versions
-  , ProtocolVersion
-  , supportedVersions
+    ProtocolVersion,
+    supportedVersions,
+
     -- * Initialization
-  , ServerInitializeOptions(..)
-  , ClientInitializeOptions(..)
-  , ServerInitializeResult
-  , ClientInitializeResult
+    ServerInitializeOptions (..),
+    ClientInitializeOptions (..),
+    ServerInitializeResult,
+    ClientInitializeResult,
+
     -- * Resource Requests
-  , ListResourcesRequest(..)
-  , ListResourcesResult(..)
-  , ReadResourceRequest(..)
-  , ReadResourceResult(..)
-  , SubscribeResourceRequest(..)
-  , SubscribeResourceResult(..)
-  , UnsubscribeResourceRequest(..)
-  , UnsubscribeResourceResult(..)
+    ListResourcesRequest (..),
+    ListResourcesResult (..),
+    ReadResourceRequest (..),
+    ReadResourceResult (..),
+    SubscribeResourceRequest (..),
+    SubscribeResourceResult (..),
+    UnsubscribeResourceRequest (..),
+    UnsubscribeResourceResult (..),
+
     -- * Tool Requests
-  , ListToolsRequest(..)
-  , ListToolsResult(..)
-  , CallToolRequest(..)
-  , CallToolResult(..)
+    ListToolsRequest (..),
+    ListToolsResult (..),
+    CallToolRequest (..),
+    CallToolResult (..),
+
     -- * Prompt Requests
-  , ListPromptsRequest(..)
-  , ListPromptsResult(..)
-  , GetPromptRequest(..)
-  , GetPromptResult(..)
+    ListPromptsRequest (..),
+    ListPromptsResult (..),
+    GetPromptRequest (..),
+    GetPromptResult (..),
+
     -- * Roots Requests
-  , ListRootsRequest(..)
-  , ListRootsResult(..)
+    ListRootsRequest (..),
+    ListRootsResult (..),
+
     -- * Notifications
-  , ResourcesListChangedNotification(..)
-  , ResourceUpdatedNotification(..)
-  , ToolsListChangedNotification(..)
-  , PromptsListChangedNotification(..)
-  ) where
+    ResourcesListChangedNotification (..),
+    ResourceUpdatedNotification (..),
+    ToolsListChangedNotification (..),
+    PromptsListChangedNotification (..),
+  )
+where
 
 import Data.Aeson
 import Data.Map.Strict (Map)
+import qualified Data.Map.Strict as Map
 import Data.Text (Text)
 import GHC.Generics
-import qualified Data.Map.Strict as Map
 
 -- | Protocol version
 type ProtocolVersion = Text
@@ -87,15 +100,19 @@ supportedVersions =
 
 -- | Implementation information
 data Implementation = Implementation
-  { serverName :: Text     -- ^ Name of the implementation
-  , serverVersion :: Text  -- ^ Version of the implementation
-  } deriving (Show, Eq, Generic)
+  { -- | Name of the implementation
+    serverName :: Text,
+    -- | Version of the implementation
+    serverVersion :: Text
+  }
+  deriving (Show, Eq, Generic)
 
 instance ToJSON Implementation where
-  toJSON Implementation{..} = object
-    [ "name" .= serverName
-    , "version" .= serverVersion
-    ]
+  toJSON Implementation {..} =
+    object
+      [ "name" .= serverName,
+        "version" .= serverVersion
+      ]
 
 instance FromJSON Implementation where
   parseJSON = withObject "Implementation" $ \o -> do
@@ -111,13 +128,16 @@ type ClientInfo = Implementation
 
 -- | Resources capability configuration
 data ResourcesCapability = ResourcesCapability
-  { resourcesListChanged :: Bool  -- ^ Server can notify when resources list changes
-  } deriving (Show, Eq, Generic)
+  { -- | Server can notify when resources list changes
+    resourcesListChanged :: Bool
+  }
+  deriving (Show, Eq, Generic)
 
 instance ToJSON ResourcesCapability where
-  toJSON ResourcesCapability{..} = object
-    [ "listChanged" .= resourcesListChanged
-    ]
+  toJSON ResourcesCapability {..} =
+    object
+      [ "listChanged" .= resourcesListChanged
+      ]
 
 instance FromJSON ResourcesCapability where
   parseJSON = withObject "ResourcesCapability" $ \o -> do
@@ -126,13 +146,16 @@ instance FromJSON ResourcesCapability where
 
 -- | Tools capability configuration
 data ToolsCapability = ToolsCapability
-  { toolsListChanged :: Bool  -- ^ Server can notify when tools list changes
-  } deriving (Show, Eq, Generic)
+  { -- | Server can notify when tools list changes
+    toolsListChanged :: Bool
+  }
+  deriving (Show, Eq, Generic)
 
 instance ToJSON ToolsCapability where
-  toJSON ToolsCapability{..} = object
-    [ "listChanged" .= toolsListChanged
-    ]
+  toJSON ToolsCapability {..} =
+    object
+      [ "listChanged" .= toolsListChanged
+      ]
 
 instance FromJSON ToolsCapability where
   parseJSON = withObject "ToolsCapability" $ \o -> do
@@ -141,13 +164,16 @@ instance FromJSON ToolsCapability where
 
 -- | Prompts capability configuration
 data PromptsCapability = PromptsCapability
-  { promptsListChanged :: Bool  -- ^ Server can notify when prompts list changes
-  } deriving (Show, Eq, Generic)
+  { -- | Server can notify when prompts list changes
+    promptsListChanged :: Bool
+  }
+  deriving (Show, Eq, Generic)
 
 instance ToJSON PromptsCapability where
-  toJSON PromptsCapability{..} = object
-    [ "listChanged" .= promptsListChanged
-    ]
+  toJSON PromptsCapability {..} =
+    object
+      [ "listChanged" .= promptsListChanged
+      ]
 
 instance FromJSON PromptsCapability where
   parseJSON = withObject "PromptsCapability" $ \o -> do
@@ -178,16 +204,21 @@ instance FromJSON RootsCapability where
 
 -- | Server capabilities
 data ServerCapabilities = ServerCapabilities
-  { resourcesCapability :: Maybe ResourcesCapability  -- ^ Resources support
-  , toolsCapability :: Maybe ToolsCapability          -- ^ Tools support
-  , promptsCapability :: Maybe PromptsCapability      -- ^ Prompts support
-  } deriving (Show, Eq, Generic)
+  { -- | Resources support
+    resourcesCapability :: Maybe ResourcesCapability,
+    -- | Tools support
+    toolsCapability :: Maybe ToolsCapability,
+    -- | Prompts support
+    promptsCapability :: Maybe PromptsCapability
+  }
+  deriving (Show, Eq, Generic)
 
 instance ToJSON ServerCapabilities where
-  toJSON ServerCapabilities{..} = object $
-    [ "resources" .= resources | resources <- maybeToList resourcesCapability ] ++
-    [ "tools" .= tools | tools <- maybeToList toolsCapability ] ++
-    [ "prompts" .= prompts | prompts <- maybeToList promptsCapability ]
+  toJSON ServerCapabilities {..} =
+    object $
+      ["resources" .= resources | resources <- maybeToList resourcesCapability]
+        ++ ["tools" .= tools | tools <- maybeToList toolsCapability]
+        ++ ["prompts" .= prompts | prompts <- maybeToList promptsCapability]
 
 instance FromJSON ServerCapabilities where
   parseJSON = withObject "ServerCapabilities" $ \o -> do
@@ -198,14 +229,18 @@ instance FromJSON ServerCapabilities where
 
 -- | Client capabilities
 data ClientCapabilities = ClientCapabilities
-  { clientRootsCapability :: Maybe RootsCapability        -- ^ Roots support
-  , clientSamplingCapability :: Maybe SamplingCapability  -- ^ Sampling support
-  } deriving (Show, Eq, Generic)
+  { -- | Roots support
+    clientRootsCapability :: Maybe RootsCapability,
+    -- | Sampling support
+    clientSamplingCapability :: Maybe SamplingCapability
+  }
+  deriving (Show, Eq, Generic)
 
 instance ToJSON ClientCapabilities where
-  toJSON ClientCapabilities{..} = object $
-    [ "roots" .= roots | roots <- maybeToList clientRootsCapability ] ++
-    [ "sampling" .= sampling | sampling <- maybeToList clientSamplingCapability ]
+  toJSON ClientCapabilities {..} =
+    object $
+      ["roots" .= roots | roots <- maybeToList clientRootsCapability]
+        ++ ["sampling" .= sampling | sampling <- maybeToList clientSamplingCapability]
 
 instance FromJSON ClientCapabilities where
   parseJSON = withObject "ClientCapabilities" $ \o -> do
@@ -215,21 +250,28 @@ instance FromJSON ClientCapabilities where
 
 -- | Resource definition
 data Resource = Resource
-  { resourceUri :: Text                -- ^ URI of the resource
-  , resourceName :: Text               -- ^ Human-readable name
-  , resourceDescription :: Maybe Text  -- ^ Optional description
-  , resourceMimeType :: Maybe Text     -- ^ Optional MIME type
-  , resourceTemplate :: Maybe Text     -- ^ Optional URI template definition
-  } deriving (Show, Eq, Generic)
+  { -- | URI of the resource
+    resourceUri :: Text,
+    -- | Human-readable name
+    resourceName :: Text,
+    -- | Optional description
+    resourceDescription :: Maybe Text,
+    -- | Optional MIME type
+    resourceMimeType :: Maybe Text,
+    -- | Optional URI template definition
+    resourceTemplate :: Maybe Text
+  }
+  deriving (Show, Eq, Generic)
 
 instance ToJSON Resource where
-  toJSON Resource{..} = object $
-    [ "uri" .= resourceUri
-    , "name" .= resourceName
-    ] ++
-    [ "description" .= d | d <- maybeToList resourceDescription ] ++
-    [ "mimeType" .= m | m <- maybeToList resourceMimeType ] ++
-    [ "template" .= t | t <- maybeToList resourceTemplate ]
+  toJSON Resource {..} =
+    object $
+      [ "uri" .= resourceUri,
+        "name" .= resourceName
+      ]
+        ++ ["description" .= d | d <- maybeToList resourceDescription]
+        ++ ["mimeType" .= m | m <- maybeToList resourceMimeType]
+        ++ ["template" .= t | t <- maybeToList resourceTemplate]
 
 instance FromJSON Resource where
   parseJSON = withObject "Resource" $ \o -> do
@@ -246,19 +288,25 @@ data ResourceContentType = TextContent | BlobContent
 
 -- | Resource content
 data ResourceContent = ResourceContent
-  { resourceContentUri :: Text                    -- ^ URI of the resource
-  , resourceContentMimeType :: Maybe Text         -- ^ Optional MIME type
-  , resourceContentText :: Maybe Text             -- ^ Text content (if TextContent)
-  , resourceContentBlob :: Maybe Text             -- ^ Blob content (base64 encoded, if BlobContent)
-  } deriving (Show, Eq, Generic)
+  { -- | URI of the resource
+    resourceContentUri :: Text,
+    -- | Optional MIME type
+    resourceContentMimeType :: Maybe Text,
+    -- | Text content (if TextContent)
+    resourceContentText :: Maybe Text,
+    -- | Blob content (base64 encoded, if BlobContent)
+    resourceContentBlob :: Maybe Text
+  }
+  deriving (Show, Eq, Generic)
 
 instance ToJSON ResourceContent where
-  toJSON ResourceContent{..} = object $
-    [ "uri" .= resourceContentUri
-    ] ++
-    [ "mimeType" .= m | m <- maybeToList resourceContentMimeType ] ++
-    [ "text" .= t | t <- maybeToList resourceContentText ] ++
-    [ "blob" .= b | b <- maybeToList resourceContentBlob ]
+  toJSON ResourceContent {..} =
+    object $
+      [ "uri" .= resourceContentUri
+      ]
+        ++ ["mimeType" .= m | m <- maybeToList resourceContentMimeType]
+        ++ ["text" .= t | t <- maybeToList resourceContentText]
+        ++ ["blob" .= b | b <- maybeToList resourceContentBlob]
 
 instance FromJSON ResourceContent where
   parseJSON = withObject "ResourceContent" $ \o -> do
@@ -268,26 +316,68 @@ instance FromJSON ResourceContent where
     blob <- o .:? "blob"
     return $ ResourceContent uri mimeType text blob
 
+data ToolAnnotations = ToolAnnotations
+  { -- | Human-readable title for the tool
+    title :: Maybe Text,
+    -- | If true, the tool does not modify its environment
+    readOnlyHint :: Maybe Bool,
+    -- | If true, the tool may perform destructive updates
+    destructiveHint :: Maybe Bool,
+    -- | If true, repeated calls with same args have no additional effect
+    idempotentHint :: Maybe Bool,
+    -- | If true, tool interacts with external entities
+    openWorldHint :: Maybe Bool
+  }
+  deriving (Show, Eq, Generic)
+
+instance ToJSON ToolAnnotations where
+  toJSON ToolAnnotations {..} =
+    object $
+      [ "title" .= title,
+        "readOnly" .= readOnlyHint,
+        "destructive" .= destructiveHint,
+        "idempotent" .= idempotentHint,
+        "openWorld" .= openWorldHint
+      ]
+
+instance FromJSON ToolAnnotations where
+  parseJSON = withObject "ToolAnnotations" $ \o -> do
+    title <- o .:? "title"
+    readOnly <- o .:? "readOnly"
+    destructive <- o .:? "destructive"
+    idempotent <- o .:? "idempotent"
+    openWorld <- o .:? "openWorld"
+    return $ ToolAnnotations title readOnly destructive idempotent openWorld
+
 -- | Tool definition
 data Tool = Tool
-  { toolName :: Text                -- ^ Name of the tool
-  , toolDescription :: Maybe Text   -- ^ Optional description
-  , toolInputSchema :: Value        -- ^ JSON schema for tool parameters
-  } deriving (Show, Eq, Generic)
+  { -- | Name of the tool
+    toolName :: Text,
+    -- | Optional description
+    toolDescription :: Maybe Text,
+    -- | JSON schema for tool parameters
+    toolInputSchema :: Value,
+    -- | Optional annotations
+    toolAnnotations :: Maybe ToolAnnotations
+  }
+  deriving (Show, Eq, Generic)
 
 instance ToJSON Tool where
-  toJSON Tool{..} = object $
-    [ "name" .= toolName
-    , "inputSchema" .= toolInputSchema
-    ] ++
-    [ "description" .= d | d <- maybeToList toolDescription ]
+  toJSON Tool {..} =
+    object $
+      [ "name" .= toolName,
+        "inputSchema" .= toolInputSchema
+      ]
+        <> ["description" .= d | d <- maybeToList toolDescription]
+        <> ["annotations" .= a | a <- maybeToList toolAnnotations]
 
 instance FromJSON Tool where
   parseJSON = withObject "Tool" $ \o -> do
     name <- o .: "name"
     description <- o .:? "description"
     inputSchema <- o .: "inputSchema"
-    return $ Tool name description inputSchema
+    annotations <- o .:? "annotations"
+    return $ Tool name description inputSchema annotations
 
 -- | Tool content type
 data ToolContentType = TextualContent | ImageContent | EmbeddedResource
@@ -307,16 +397,20 @@ instance FromJSON ToolContentType where
 
 -- | Tool content
 data ToolContent = ToolContent
-  { toolContentType :: ToolContentType        -- ^ Type of content
-  , toolContentText :: Maybe Text             -- ^ Text content (if TextContent)
-  -- More fields would be here for image and resource, simplified for brevity
-  } deriving (Show, Eq, Generic)
+  { -- | Type of content
+    toolContentType :: ToolContentType,
+    -- | Text content (if TextContent)
+    -- More fields would be here for image and resource, simplified for brevity
+    toolContentText :: Maybe Text
+  }
+  deriving (Show, Eq, Generic)
 
 instance ToJSON ToolContent where
-  toJSON ToolContent{..} = object $
-    [ "type" .= toolContentType
-    ] ++
-    [ "text" .= t | t <- maybeToList toolContentText ]
+  toJSON ToolContent {..} =
+    object $
+      [ "type" .= toolContentType
+      ]
+        ++ ["text" .= t | t <- maybeToList toolContentText]
 
 instance FromJSON ToolContent where
   parseJSON = withObject "ToolContent" $ \o -> do
@@ -326,17 +420,22 @@ instance FromJSON ToolContent where
 
 -- | Prompt argument definition
 data PromptArgument = PromptArgument
-  { promptArgumentName :: Text                -- ^ Argument name
-  , promptArgumentDescription :: Maybe Text   -- ^ Optional description
-  , promptArgumentRequired :: Bool            -- ^ Whether the argument is required
-  } deriving (Show, Eq, Generic)
+  { -- | Argument name
+    promptArgumentName :: Text,
+    -- | Optional description
+    promptArgumentDescription :: Maybe Text,
+    -- | Whether the argument is required
+    promptArgumentRequired :: Bool
+  }
+  deriving (Show, Eq, Generic)
 
 instance ToJSON PromptArgument where
-  toJSON PromptArgument{..} = object $
-    [ "name" .= promptArgumentName
-    , "required" .= promptArgumentRequired
-    ] ++
-    [ "description" .= d | d <- maybeToList promptArgumentDescription ]
+  toJSON PromptArgument {..} =
+    object $
+      [ "name" .= promptArgumentName,
+        "required" .= promptArgumentRequired
+      ]
+        ++ ["description" .= d | d <- maybeToList promptArgumentDescription]
 
 instance FromJSON PromptArgument where
   parseJSON = withObject "PromptArgument" $ \o -> do
@@ -347,17 +446,22 @@ instance FromJSON PromptArgument where
 
 -- | Prompt definition
 data Prompt = Prompt
-  { promptName :: Text                   -- ^ Name of the prompt
-  , promptDescription :: Maybe Text      -- ^ Optional description
-  , promptArguments :: [PromptArgument]  -- ^ Arguments for the prompt
-  } deriving (Show, Eq, Generic)
+  { -- | Name of the prompt
+    promptName :: Text,
+    -- | Optional description
+    promptDescription :: Maybe Text,
+    -- | Arguments for the prompt
+    promptArguments :: [PromptArgument]
+  }
+  deriving (Show, Eq, Generic)
 
 instance ToJSON Prompt where
-  toJSON Prompt{..} = object $
-    [ "name" .= promptName
-    , "arguments" .= promptArguments
-    ] ++
-    [ "description" .= d | d <- maybeToList promptDescription ]
+  toJSON Prompt {..} =
+    object $
+      [ "name" .= promptName,
+        "arguments" .= promptArguments
+      ]
+        ++ ["description" .= d | d <- maybeToList promptDescription]
 
 instance FromJSON Prompt where
   parseJSON = withObject "Prompt" $ \o -> do
@@ -382,15 +486,19 @@ instance FromJSON PromptContentType where
 
 -- | Prompt content
 data PromptContent = PromptContent
-  { promptContentType :: PromptContentType   -- ^ Type of content
-  , promptContentText :: Text                -- ^ Content text
-  } deriving (Show, Eq, Generic)
+  { -- | Type of content
+    promptContentType :: PromptContentType,
+    -- | Content text
+    promptContentText :: Text
+  }
+  deriving (Show, Eq, Generic)
 
 instance ToJSON PromptContent where
-  toJSON PromptContent{..} = object
-    [ "type" .= promptContentType
-    , "text" .= promptContentText
-    ]
+  toJSON PromptContent {..} =
+    object
+      [ "type" .= promptContentType,
+        "text" .= promptContentText
+      ]
 
 instance FromJSON PromptContent where
   parseJSON = withObject "PromptContent" $ \o -> do
@@ -400,15 +508,19 @@ instance FromJSON PromptContent where
 
 -- | Prompt message
 data PromptMessage = PromptMessage
-  { promptMessageRole :: Text               -- ^ Message role (user/assistant)
-  , promptMessageContent :: PromptContent   -- ^ Message content
-  } deriving (Show, Eq, Generic)
+  { -- | Message role (user/assistant)
+    promptMessageRole :: Text,
+    -- | Message content
+    promptMessageContent :: PromptContent
+  }
+  deriving (Show, Eq, Generic)
 
 instance ToJSON PromptMessage where
-  toJSON PromptMessage{..} = object
-    [ "role" .= promptMessageRole
-    , "content" .= promptMessageContent
-    ]
+  toJSON PromptMessage {..} =
+    object
+      [ "role" .= promptMessageRole,
+        "content" .= promptMessageContent
+      ]
 
 instance FromJSON PromptMessage where
   parseJSON = withObject "PromptMessage" $ \o -> do
@@ -418,15 +530,19 @@ instance FromJSON PromptMessage where
 
 -- | Root definition
 data Root = Root
-  { rootUri :: Text      -- ^ URI for the root
-  , rootName :: Text     -- ^ Human-readable name
-  } deriving (Show, Eq, Generic)
+  { -- | URI for the root
+    rootUri :: Text,
+    -- | Human-readable name
+    rootName :: Text
+  }
+  deriving (Show, Eq, Generic)
 
 instance ToJSON Root where
-  toJSON Root{..} = object
-    [ "uri" .= rootUri
-    , "name" .= rootName
-    ]
+  toJSON Root {..} =
+    object
+      [ "uri" .= rootUri,
+        "name" .= rootName
+      ]
 
 instance FromJSON Root where
   parseJSON = withObject "Root" $ \o -> do
@@ -436,19 +552,24 @@ instance FromJSON Root where
 
 -- | Server initialize options
 data ServerInitializeOptions = ServerInitializeOptions
-  { serverInitProtocolVersion :: ProtocolVersion  -- ^ Protocol version
-  , serverInitInfo :: Implementation              -- ^ Server info
-  , serverInitCapabilities :: ServerCapabilities  -- ^ Server capabilities
-  , serverInitInstructions :: Text
-  } deriving (Show, Eq, Generic)
+  { -- | Protocol version
+    serverInitProtocolVersion :: ProtocolVersion,
+    -- | Server info
+    serverInitInfo :: Implementation,
+    -- | Server capabilities
+    serverInitCapabilities :: ServerCapabilities,
+    serverInitInstructions :: Text
+  }
+  deriving (Show, Eq, Generic)
 
 instance ToJSON ServerInitializeOptions where
-  toJSON ServerInitializeOptions{..} = object
-    [ "protocolVersion" .= serverInitProtocolVersion
-    , "serverInfo" .= serverInitInfo
-    , "capabilities" .= serverInitCapabilities
-    , "instructions" .= serverInitInstructions
-    ]
+  toJSON ServerInitializeOptions {..} =
+    object
+      [ "protocolVersion" .= serverInitProtocolVersion,
+        "serverInfo" .= serverInitInfo,
+        "capabilities" .= serverInitCapabilities,
+        "instructions" .= serverInitInstructions
+      ]
 
 instance FromJSON ServerInitializeOptions where
   parseJSON = withObject "ServerInitializeOptions" $ \o -> do
@@ -460,17 +581,22 @@ instance FromJSON ServerInitializeOptions where
 
 -- | Client initialize options
 data ClientInitializeOptions = ClientInitializeOptions
-  { clientInitProtocolVersion :: ProtocolVersion  -- ^ Protocol version
-  , clientInitInfo :: Implementation              -- ^ Client info
-  , clientInitCapabilities :: ClientCapabilities  -- ^ Client capabilities
-  } deriving (Show, Eq, Generic)
+  { -- | Protocol version
+    clientInitProtocolVersion :: ProtocolVersion,
+    -- | Client info
+    clientInitInfo :: Implementation,
+    -- | Client capabilities
+    clientInitCapabilities :: ClientCapabilities
+  }
+  deriving (Show, Eq, Generic)
 
 instance ToJSON ClientInitializeOptions where
-  toJSON ClientInitializeOptions{..} = object
-    [ "protocolVersion" .= clientInitProtocolVersion
-    , "clientInfo" .= clientInitInfo
-    , "capabilities" .= clientInitCapabilities
-    ]
+  toJSON ClientInitializeOptions {..} =
+    object
+      [ "protocolVersion" .= clientInitProtocolVersion,
+        "clientInfo" .= clientInitInfo,
+        "capabilities" .= clientInitCapabilities
+      ]
 
 instance FromJSON ClientInitializeOptions where
   parseJSON = withObject "ClientInitializeOptions" $ \o -> do
@@ -498,13 +624,16 @@ instance FromJSON ListResourcesRequest where
 
 -- | List resources result
 data ListResourcesResult = ListResourcesResult
-  { listResourcesResult :: [Resource]  -- ^ Available resources
-  } deriving (Show, Eq, Generic)
+  { -- | Available resources
+    listResourcesResult :: [Resource]
+  }
+  deriving (Show, Eq, Generic)
 
 instance ToJSON ListResourcesResult where
-  toJSON ListResourcesResult{..} = object
-    [ "resources" .= listResourcesResult
-    ]
+  toJSON ListResourcesResult {..} =
+    object
+      [ "resources" .= listResourcesResult
+      ]
 
 instance FromJSON ListResourcesResult where
   parseJSON = withObject "ListResourcesResult" $ \o -> do
@@ -513,13 +642,16 @@ instance FromJSON ListResourcesResult where
 
 -- | Read resource request
 data ReadResourceRequest = ReadResourceRequest
-  { resourceReadUri :: Text  -- ^ URI of the resource to read
-  } deriving (Show, Eq, Generic)
+  { -- | URI of the resource to read
+    resourceReadUri :: Text
+  }
+  deriving (Show, Eq, Generic)
 
 instance ToJSON ReadResourceRequest where
-  toJSON ReadResourceRequest{..} = object
-    [ "uri" .= resourceReadUri
-    ]
+  toJSON ReadResourceRequest {..} =
+    object
+      [ "uri" .= resourceReadUri
+      ]
 
 instance FromJSON ReadResourceRequest where
   parseJSON = withObject "ReadResourceRequest" $ \o -> do
@@ -528,13 +660,16 @@ instance FromJSON ReadResourceRequest where
 
 -- | Read resource result
 data ReadResourceResult = ReadResourceResult
-  { readResourceContents :: [ResourceContent]  -- ^ Resource contents
-  } deriving (Show, Eq, Generic)
+  { -- | Resource contents
+    readResourceContents :: [ResourceContent]
+  }
+  deriving (Show, Eq, Generic)
 
 instance ToJSON ReadResourceResult where
-  toJSON ReadResourceResult{..} = object
-    [ "contents" .= readResourceContents
-    ]
+  toJSON ReadResourceResult {..} =
+    object
+      [ "contents" .= readResourceContents
+      ]
 
 instance FromJSON ReadResourceResult where
   parseJSON = withObject "ReadResourceResult" $ \o -> do
@@ -543,13 +678,16 @@ instance FromJSON ReadResourceResult where
 
 -- | Subscribe resource request
 data SubscribeResourceRequest = SubscribeResourceRequest
-  { subscribeResourceUri :: Text  -- ^ URI of the resource to subscribe to
-  } deriving (Show, Eq, Generic)
+  { -- | URI of the resource to subscribe to
+    subscribeResourceUri :: Text
+  }
+  deriving (Show, Eq, Generic)
 
 instance ToJSON SubscribeResourceRequest where
-  toJSON SubscribeResourceRequest{..} = object
-    [ "uri" .= subscribeResourceUri
-    ]
+  toJSON SubscribeResourceRequest {..} =
+    object
+      [ "uri" .= subscribeResourceUri
+      ]
 
 instance FromJSON SubscribeResourceRequest where
   parseJSON = withObject "SubscribeResourceRequest" $ \o -> do
@@ -569,13 +707,16 @@ instance FromJSON SubscribeResourceResult where
 
 -- | Unsubscribe resource request
 data UnsubscribeResourceRequest = UnsubscribeResourceRequest
-  { unsubscribeResourceUri :: Text  -- ^ URI of the resource to unsubscribe from
-  } deriving (Show, Eq, Generic)
+  { -- | URI of the resource to unsubscribe from
+    unsubscribeResourceUri :: Text
+  }
+  deriving (Show, Eq, Generic)
 
 instance ToJSON UnsubscribeResourceRequest where
-  toJSON UnsubscribeResourceRequest{..} = object
-    [ "uri" .= unsubscribeResourceUri
-    ]
+  toJSON UnsubscribeResourceRequest {..} =
+    object
+      [ "uri" .= unsubscribeResourceUri
+      ]
 
 instance FromJSON UnsubscribeResourceRequest where
   parseJSON = withObject "UnsubscribeResourceRequest" $ \o -> do
@@ -606,13 +747,16 @@ instance FromJSON ListToolsRequest where
 
 -- | List tools result
 data ListToolsResult = ListToolsResult
-  { listToolsResult :: [Tool]  -- ^ Available tools
-  } deriving (Show, Eq, Generic)
+  { -- | Available tools
+    listToolsResult :: [Tool]
+  }
+  deriving (Show, Eq, Generic)
 
 instance ToJSON ListToolsResult where
-  toJSON ListToolsResult{..} = object
-    [ "tools" .= listToolsResult
-    ]
+  toJSON ListToolsResult {..} =
+    object
+      [ "tools" .= listToolsResult
+      ]
 
 instance FromJSON ListToolsResult where
   parseJSON = withObject "ListToolsResult" $ \o -> do
@@ -621,15 +765,19 @@ instance FromJSON ListToolsResult where
 
 -- | Call tool request
 data CallToolRequest = CallToolRequest
-  { callToolName :: Text                  -- ^ Name of the tool to call
-  , callToolArguments :: Map Text Value   -- ^ Tool arguments
-  } deriving (Show, Eq, Generic)
+  { -- | Name of the tool to call
+    callToolName :: Text,
+    -- | Tool arguments
+    callToolArguments :: Map Text Value
+  }
+  deriving (Show, Eq, Generic)
 
 instance ToJSON CallToolRequest where
-  toJSON CallToolRequest{..} = object
-    [ "name" .= callToolName
-    , "arguments" .= callToolArguments
-    ]
+  toJSON CallToolRequest {..} =
+    object
+      [ "name" .= callToolName,
+        "arguments" .= callToolArguments
+      ]
 
 instance FromJSON CallToolRequest where
   parseJSON = withObject "CallToolRequest" $ \o -> do
@@ -639,15 +787,19 @@ instance FromJSON CallToolRequest where
 
 -- | Call tool result
 data CallToolResult = CallToolResult
-  { callToolContent :: [ToolContent]  -- ^ Tool execution result content
-  , callToolIsError :: Bool           -- ^ Whether the result is an error
-  } deriving (Show, Eq, Generic)
+  { -- | Tool execution result content
+    callToolContent :: [ToolContent],
+    -- | Whether the result is an error
+    callToolIsError :: Bool
+  }
+  deriving (Show, Eq, Generic)
 
 instance ToJSON CallToolResult where
-  toJSON CallToolResult{..} = object
-    [ "content" .= callToolContent
-    , "isError" .= callToolIsError
-    ]
+  toJSON CallToolResult {..} =
+    object
+      [ "content" .= callToolContent,
+        "isError" .= callToolIsError
+      ]
 
 instance FromJSON CallToolResult where
   parseJSON = withObject "CallToolResult" $ \o -> do
@@ -668,13 +820,16 @@ instance FromJSON ListPromptsRequest where
 
 -- | List prompts result
 data ListPromptsResult = ListPromptsResult
-  { listPromptsResult :: [Prompt]  -- ^ Available prompts
-  } deriving (Show, Eq, Generic)
+  { -- | Available prompts
+    listPromptsResult :: [Prompt]
+  }
+  deriving (Show, Eq, Generic)
 
 instance ToJSON ListPromptsResult where
-  toJSON ListPromptsResult{..} = object
-    [ "prompts" .= listPromptsResult
-    ]
+  toJSON ListPromptsResult {..} =
+    object
+      [ "prompts" .= listPromptsResult
+      ]
 
 instance FromJSON ListPromptsResult where
   parseJSON = withObject "ListPromptsResult" $ \o -> do
@@ -683,15 +838,19 @@ instance FromJSON ListPromptsResult where
 
 -- | Get prompt request
 data GetPromptRequest = GetPromptRequest
-  { getPromptName :: Text                 -- ^ Name of the prompt to get
-  , getPromptArguments :: Map Text Text   -- ^ Prompt arguments
-  } deriving (Show, Eq, Generic)
+  { -- | Name of the prompt to get
+    getPromptName :: Text,
+    -- | Prompt arguments
+    getPromptArguments :: Map Text Text
+  }
+  deriving (Show, Eq, Generic)
 
 instance ToJSON GetPromptRequest where
-  toJSON GetPromptRequest{..} = object
-    [ "name" .= getPromptName
-    , "arguments" .= getPromptArguments
-    ]
+  toJSON GetPromptRequest {..} =
+    object
+      [ "name" .= getPromptName,
+        "arguments" .= getPromptArguments
+      ]
 
 instance FromJSON GetPromptRequest where
   parseJSON = withObject "GetPromptRequest" $ \o -> do
@@ -701,15 +860,19 @@ instance FromJSON GetPromptRequest where
 
 -- | Get prompt result
 data GetPromptResult = GetPromptResult
-  { getPromptDescription :: Maybe Text    -- ^ Optional description
-  , getPromptMessages :: [PromptMessage]  -- ^ Prompt messages
-  } deriving (Show, Eq, Generic)
+  { -- | Optional description
+    getPromptDescription :: Maybe Text,
+    -- | Prompt messages
+    getPromptMessages :: [PromptMessage]
+  }
+  deriving (Show, Eq, Generic)
 
 instance ToJSON GetPromptResult where
-  toJSON GetPromptResult{..} = object $
-    [ "messages" .= getPromptMessages
-    ] ++
-    [ "description" .= d | d <- maybeToList getPromptDescription ]
+  toJSON GetPromptResult {..} =
+    object $
+      [ "messages" .= getPromptMessages
+      ]
+        ++ ["description" .= d | d <- maybeToList getPromptDescription]
 
 instance FromJSON GetPromptResult where
   parseJSON = withObject "GetPromptResult" $ \o -> do
@@ -730,13 +893,16 @@ instance FromJSON ListRootsRequest where
 
 -- | List roots result
 data ListRootsResult = ListRootsResult
-  { listRootsResult :: [Root]  -- ^ Available roots
-  } deriving (Show, Eq, Generic)
+  { -- | Available roots
+    listRootsResult :: [Root]
+  }
+  deriving (Show, Eq, Generic)
 
 instance ToJSON ListRootsResult where
-  toJSON ListRootsResult{..} = object
-    [ "roots" .= listRootsResult
-    ]
+  toJSON ListRootsResult {..} =
+    object
+      [ "roots" .= listRootsResult
+      ]
 
 instance FromJSON ListRootsResult where
   parseJSON = withObject "ListRootsResult" $ \o -> do
@@ -756,13 +922,16 @@ instance FromJSON ResourcesListChangedNotification where
 
 -- | Resource updated notification
 data ResourceUpdatedNotification = ResourceUpdatedNotification
-  { resourceUpdatedUri :: Text  -- ^ URI of the updated resource
-  } deriving (Show, Eq, Generic)
+  { -- | URI of the updated resource
+    resourceUpdatedUri :: Text
+  }
+  deriving (Show, Eq, Generic)
 
 instance ToJSON ResourceUpdatedNotification where
-  toJSON ResourceUpdatedNotification{..} = object
-    [ "uri" .= resourceUpdatedUri
-    ]
+  toJSON ResourceUpdatedNotification {..} =
+    object
+      [ "uri" .= resourceUpdatedUri
+      ]
 
 instance FromJSON ResourceUpdatedNotification where
   parseJSON = withObject "ResourceUpdatedNotification" $ \o -> do
