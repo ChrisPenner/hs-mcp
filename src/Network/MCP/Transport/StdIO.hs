@@ -133,9 +133,3 @@ instance Transport STDIOTransport where
       handleErr :: SomeException -> IO ()
       handleErr err = do
         hPutStrLn (stderrHandle transport) $ "Error reading message: " ++ show err
-
-  -- Close the transport
-  closeTransport transport = do
-    atomically $ writeTVar (transportClosed transport) True
-    onTransportClosed transport
-    return ()

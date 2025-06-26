@@ -166,9 +166,6 @@ class Transport t where
   -- | Keep processing messages using the provided handler.
   handleMessages :: t -> (Message -> IO (Maybe Message)) -> IO ()
 
-  -- | Close the transport
-  closeTransport :: t -> IO ()
-
 -- Helper function
 maybeToList :: Maybe a -> [a]
 maybeToList Nothing = []
