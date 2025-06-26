@@ -187,11 +187,12 @@ handleRequest server request = do
 -- | Handle a notification
 handleNotification :: Server -> Notification -> IO ()
 handleNotification _server notification = do
-  let method = notificationMethod notification
+  let _method = notificationMethod notification
       _params = fromMaybe Null (notificationParams notification)
 
-  -- TODO: Implement notification handling
-  putStrLn $ "Received notification: " ++ T.unpack method
+  -- TODO: Implement notification handling logic
+
+  pure ()
 
 -- | Register a request handler
 registerRequestHandler :: Server -> Text -> (Value -> Server -> IO (Either SomeException Value)) -> IO ()
