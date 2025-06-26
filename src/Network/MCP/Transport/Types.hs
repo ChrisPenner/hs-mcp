@@ -13,7 +13,6 @@ module Network.MCP.Transport.Types
     ErrorResponse (..),
     TransportError (..),
     JSONRPC (..),
-    Responder,
   )
 where
 
@@ -157,8 +156,6 @@ instance FromJSON Message where
       (Nothing, Just _) -> NotificationMessage <$> parseJSON val
       _ -> fail "Invalid JSON-RPC message"
 
-type Responder = Message -> IO (Either TransportError ())
-
 -- | Transport error
 data TransportError = TransportError String
   deriving stock (Show, Eq)
@@ -167,7 +164,7 @@ data TransportError = TransportError String
 -- | Transport interface for all transport implementations
 class Transport t where
   -- | Keep processing messages using the provided handler.
-  handleMessages :: t -> (Message -> Responder -> IO ()) -> IO ()
+  handleMessages :: t -> (Message -> IO (Maybe Message)) -> IO ()
 
   -- | Close the transport
   closeTransport :: t -> IO ()

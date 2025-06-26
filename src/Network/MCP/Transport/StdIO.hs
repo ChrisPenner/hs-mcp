@@ -109,7 +109,9 @@ writeThread transport = forever $ do
 instance Transport STDIOTransport where
   handleMessages transport handler = forever $ handle handleErr $ do
     msg <- readMessage
-    handler msg sendMessage
+    handler msg >>= \case
+      Nothing -> pure ()
+      Just response -> sendMessage response
     where
       readMessage = do
         line <- BS8.hGetLine (stdinHandle transport)
@@ -123,10 +125,10 @@ instance Transport STDIOTransport where
       sendMessage msg = do
         isClosed <- readTVarIO (transportClosed transport)
         if isClosed
-          then return $ Left $ TransportError "Transport closed"
+          then throwIO $ TransportError "Transport closed"
           else do
             atomically $ writeTQueue (messageQueue transport) msg
-            return $ Right ()
+            return $ ()
 
       handleErr :: SomeException -> IO ()
       handleErr err = do

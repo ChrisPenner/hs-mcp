@@ -25,7 +25,7 @@ where
 import Control.Concurrent (forkIO)
 import qualified Control.Concurrent.Async as Async
 import Control.Concurrent.STM
-import Control.Exception (SomeException, toException, try)
+import Control.Exception (SomeException, throwIO, toException, try)
 import Control.Monad
 import Data.Aeson
 import qualified Data.Map.Strict as Map
@@ -114,19 +114,21 @@ withTransportServer server t action = do
     action
 
 -- Helper to process a message
-handleMessage :: Server -> Message -> Responder -> IO ()
-handleMessage server msg respond = case msg of
+handleMessage :: Server -> Message -> IO (Maybe Message)
+handleMessage server msg = case msg of
   RequestMessage request ->
     handleRequest server request >>= \case
-      Right response -> void $ respond (ResponseMessage response)
-      Left err -> sendErrorResponse respond request err
-  NotificationMessage notification ->
-    void $ handleNotification server notification
-  _ -> putStrLn "Received unexpected message type"
+      Right response -> pure . Just $ (ResponseMessage response)
+      Left err -> pure . Just $ mkErrorResponse request err
+  NotificationMessage notification -> do
+    handleNotification server notification
+    pure Nothing
+  _ -> do
+    throwIO $ TransportError $ "Received unexpected message type in handleMessage: " <> show msg
 
 -- Helper to send error responses
-sendErrorResponse :: Responder -> Request -> SomeException -> IO ()
-sendErrorResponse respond request err = do
+mkErrorResponse :: Request -> SomeException -> Message
+mkErrorResponse request err =
   let errorResponse =
         Response
           { responseJsonrpc = JSONRPC "2.0",
@@ -140,7 +142,7 @@ sendErrorResponse respond request err = do
                     errorData = Nothing
                   }
           }
-  void $ respond (ResponseMessage errorResponse)
+   in (ResponseMessage errorResponse)
 
 -- | Handle a request
 handleRequest :: Server -> Request -> IO (Either SomeException Response)
