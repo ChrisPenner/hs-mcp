@@ -1,25 +1,30 @@
+{-# LANGUAGE DeriveAnyClass #-}
+{-# LANGUAGE DeriveGeneric #-}
+{-# LANGUAGE DerivingStrategies #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE RecordWildCards #-}
-{-# LANGUAGE DeriveGeneric #-}
 
 module Network.MCP.Transport.Types
-  ( Transport(..)
-  , Message(..)
-  , Request(..)
-  , Response(..)
-  , Notification(..)
-  , ErrorResponse(..)
-  , TransportError(..)
-  , JSONRPC(..)
-  ) where
+  ( Transport (..),
+    Message (..),
+    Request (..),
+    Response (..),
+    Notification (..),
+    ErrorResponse (..),
+    TransportError (..),
+    JSONRPC (..),
+    Responder,
+  )
+where
 
+import Control.Exception (Exception)
 import Data.Aeson
 import Data.Aeson.Types
 import Data.Text (Text)
 import GHC.Generics
 
 -- JSON-RPC protocol constant
-newtype JSONRPC = JSONRPC { unJSONRPC :: Text }
+newtype JSONRPC = JSONRPC {unJSONRPC :: Text}
   deriving (Show, Eq, Generic)
 
 instance ToJSON JSONRPC where
@@ -33,19 +38,21 @@ instance FromJSON JSONRPC where
 
 -- | JSON-RPC Request
 data Request = Request
-  { requestJsonrpc :: JSONRPC
-  , requestId :: Value
-  , requestMethod :: Text
-  , requestParams :: Maybe Value
-  } deriving (Show, Eq, Generic)
+  { requestJsonrpc :: JSONRPC,
+    requestId :: Value,
+    requestMethod :: Text,
+    requestParams :: Maybe Value
+  }
+  deriving (Show, Eq, Generic)
 
 instance ToJSON Request where
-  toJSON Request{..} = object $
-    [ "jsonrpc" .= requestJsonrpc
-    , "id" .= requestId
-    , "method" .= requestMethod
-    ] ++
-    [ "params" .= p | p <- maybeToList requestParams ]
+  toJSON Request {..} =
+    object $
+      [ "jsonrpc" .= requestJsonrpc,
+        "id" .= requestId,
+        "method" .= requestMethod
+      ]
+        ++ ["params" .= p | p <- maybeToList requestParams]
 
 instance FromJSON Request where
   parseJSON = withObject "Request" $ \o -> do
@@ -57,17 +64,19 @@ instance FromJSON Request where
 
 -- | JSON-RPC Notification (no ID)
 data Notification = Notification
-  { notificationJsonrpc :: JSONRPC
-  , notificationMethod :: Text
-  , notificationParams :: Maybe Value
-  } deriving (Show, Eq, Generic)
+  { notificationJsonrpc :: JSONRPC,
+    notificationMethod :: Text,
+    notificationParams :: Maybe Value
+  }
+  deriving (Show, Eq, Generic)
 
 instance ToJSON Notification where
-  toJSON Notification{..} = object $
-    [ "jsonrpc" .= notificationJsonrpc
-    , "method" .= notificationMethod
-    ] ++
-    [ "params" .= p | p <- maybeToList notificationParams ]
+  toJSON Notification {..} =
+    object $
+      [ "jsonrpc" .= notificationJsonrpc,
+        "method" .= notificationMethod
+      ]
+        ++ ["params" .= p | p <- maybeToList notificationParams]
 
 instance FromJSON Notification where
   parseJSON = withObject "Notification" $ \o -> do
@@ -78,17 +87,19 @@ instance FromJSON Notification where
 
 -- | JSON-RPC Error Response
 data ErrorResponse = ErrorResponse
-  { errorCode :: Int
-  , errorMessage :: Text
-  , errorData :: Maybe Value
-  } deriving (Show, Eq, Generic)
+  { errorCode :: Int,
+    errorMessage :: Text,
+    errorData :: Maybe Value
+  }
+  deriving (Show, Eq, Generic)
 
 instance ToJSON ErrorResponse where
-  toJSON ErrorResponse{..} = object $
-    [ "code" .= errorCode
-    , "message" .= errorMessage
-    ] ++
-    [ "data" .= d | d <- maybeToList errorData ]
+  toJSON ErrorResponse {..} =
+    object $
+      [ "code" .= errorCode,
+        "message" .= errorMessage
+      ]
+        ++ ["data" .= d | d <- maybeToList errorData]
 
 instance FromJSON ErrorResponse where
   parseJSON = withObject "ErrorResponse" $ \o -> do
@@ -99,19 +110,21 @@ instance FromJSON ErrorResponse where
 
 -- | JSON-RPC Response
 data Response = Response
-  { responseJsonrpc :: JSONRPC
-  , responseId :: Value
-  , responseResult :: Maybe Value
-  , responseError :: Maybe ErrorResponse
-  } deriving (Show, Eq, Generic)
+  { responseJsonrpc :: JSONRPC,
+    responseId :: Value,
+    responseResult :: Maybe Value,
+    responseError :: Maybe ErrorResponse
+  }
+  deriving (Show, Eq, Generic)
 
 instance ToJSON Response where
-  toJSON Response{..} = object $
-    [ "jsonrpc" .= responseJsonrpc
-    , "id" .= responseId
-    ] ++
-    [ "result" .= r | r <- maybeToList responseResult ] ++
-    [ "error" .= e | e <- maybeToList responseError ]
+  toJSON Response {..} =
+    object $
+      [ "jsonrpc" .= responseJsonrpc,
+        "id" .= responseId
+      ]
+        ++ ["result" .= r | r <- maybeToList responseResult]
+        ++ ["error" .= e | e <- maybeToList responseError]
 
 instance FromJSON Response where
   parseJSON = withObject "Response" $ \o -> do
@@ -134,29 +147,30 @@ instance ToJSON Message where
   toJSON (NotificationMessage notif) = toJSON notif
 
 instance FromJSON Message where
-    parseJSON val = do
-        obj <- parseJSON val
-        id' <- obj .:? "id" :: Parser (Maybe Value)
-        method <- obj .:? "method" :: Parser (Maybe Text)
-        case (id', method) of
-            (Just _, Just _) -> RequestMessage <$> parseJSON val
-            (Just _, Nothing) -> ResponseMessage <$> parseJSON val
-            (Nothing, Just _) -> NotificationMessage <$> parseJSON val
-            _ -> fail "Invalid JSON-RPC message"
+  parseJSON val = do
+    obj <- parseJSON val
+    id' <- obj .:? "id" :: Parser (Maybe Value)
+    method <- obj .:? "method" :: Parser (Maybe Text)
+    case (id', method) of
+      (Just _, Just _) -> RequestMessage <$> parseJSON val
+      (Just _, Nothing) -> ResponseMessage <$> parseJSON val
+      (Nothing, Just _) -> NotificationMessage <$> parseJSON val
+      _ -> fail "Invalid JSON-RPC message"
+
+type Responder = Message -> IO (Either TransportError ())
 
 -- | Transport error
 data TransportError = TransportError String
-  deriving (Show, Eq)
+  deriving stock (Show, Eq)
+  deriving anyclass (Exception)
 
 -- | Transport interface for all transport implementations
 class Transport t where
-  -- | Send a message through the transport
-  sendMessage :: t -> Message -> IO (Either TransportError ())
+  -- | Keep processing messages using the provided handler.
+  handleMessages :: t -> (Message -> Responder -> IO ()) -> IO ()
 
   -- | Close the transport
   closeTransport :: t -> IO ()
-  readMessage :: t -> IO Message
-
 
 -- Helper function
 maybeToList :: Maybe a -> [a]

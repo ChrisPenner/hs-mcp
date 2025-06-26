@@ -17,13 +17,15 @@ module Network.MCP.Server
     registerPrompts,
     registerPromptHandler,
     runServerWithTransport,
+    withTransportServer,
     handleRequest,
   )
 where
 
-import Control.Concurrent (forkIO, threadDelay)
+import Control.Concurrent (forkIO)
+import qualified Control.Concurrent.Async as Async
 import Control.Concurrent.STM
-import Control.Exception (SomeException, catch, toException, try)
+import Control.Exception (SomeException, toException, try)
 import Control.Monad
 import Data.Aeson
 import qualified Data.Map.Strict as Map
@@ -96,35 +98,35 @@ registerPromptHandler :: Server -> PromptHandler -> IO ()
 registerPromptHandler server handler = atomically $ writeTVar (serverPromptHandler server) (Just handler)
 
 runServerWithTransport :: (Transport t) => Server -> t -> IO ()
-runServerWithTransport server transport = do
+runServerWithTransport server t = do
   void $
     forkIO
-      ( forever $ do
-          msg <-
-            catch
-              (readMessage transport)
-              ( \(e :: SomeException) -> do
-                  putStrLn $ "Error reading message: " ++ show e
-                  threadDelay 1000000 -- Wait before retrying
-                  readMessage transport
-              )
-          handleMessage server transport msg
+      ( handleMessages t (handleMessage server)
       )
 
+withTransportServer :: (Transport t) => Server -> t -> IO a -> IO a
+withTransportServer server t action = do
+  let runServer = handleMessages t (handleMessage server)
+  Async.withAsync runServer $ \_ -> do
+    -- Run the server with the provided transport
+    runServerWithTransport server t
+    -- Execute the action with the server running
+    action
+
 -- Helper to process a message
-handleMessage :: (Transport t) => Server -> t -> Message -> IO ()
-handleMessage server transport = \case
+handleMessage :: Server -> Message -> Responder -> IO ()
+handleMessage server msg respond = case msg of
   RequestMessage request ->
     handleRequest server request >>= \case
-      Right response -> void $ sendMessage transport (ResponseMessage response)
-      Left err -> sendErrorResponse transport request err
+      Right response -> void $ respond (ResponseMessage response)
+      Left err -> sendErrorResponse respond request err
   NotificationMessage notification ->
     void $ handleNotification server notification
   _ -> putStrLn "Received unexpected message type"
 
 -- Helper to send error responses
-sendErrorResponse :: (Transport t) => t -> Request -> SomeException -> IO ()
-sendErrorResponse transport request err = do
+sendErrorResponse :: Responder -> Request -> SomeException -> IO ()
+sendErrorResponse respond request err = do
   let errorResponse =
         Response
           { responseJsonrpc = JSONRPC "2.0",
@@ -138,7 +140,7 @@ sendErrorResponse transport request err = do
                     errorData = Nothing
                   }
           }
-  void $ sendMessage transport (ResponseMessage errorResponse)
+  void $ respond (ResponseMessage errorResponse)
 
 -- | Handle a request
 handleRequest :: Server -> Request -> IO (Either SomeException Response)
