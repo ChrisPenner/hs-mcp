@@ -19,6 +19,7 @@ module Network.MCP.Server
     runServerWithTransport,
     withTransportServer,
     handleRequest,
+    handleMessage,
   )
 where
 
