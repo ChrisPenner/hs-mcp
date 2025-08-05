@@ -7,12 +7,12 @@ module Network.MCP.Server.StdIO
   )
 where
 
-import Data.Void (Void)
 import Network.MCP.Server
 import Network.MCP.Transport.StdIO (newSTDIOTransport)
+import UnliftIO (Async)
 
--- | Run an MCP server using STDIO transport, handling messages forever.
-runServerWithSTDIO :: Server -> IO Void
+-- | Run an MCP server using STDIO transport, handling messages until the transport is closed.
+runServerWithSTDIO :: Server -> IO ()
 runServerWithSTDIO server = do
   -- Create the STDIO transport
   stdioTransport <- newSTDIOTransport
@@ -20,7 +20,7 @@ runServerWithSTDIO server = do
   -- Start the transport
   runServerWithTransport server stdioTransport
 
-withSTDIOServer :: Server -> IO a -> IO a
+withSTDIOServer :: Server -> (Async () -> IO a) -> IO a
 withSTDIOServer server action = do
   stdioTransport <- newSTDIOTransport
   withTransportServer server stdioTransport action

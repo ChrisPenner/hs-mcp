@@ -26,17 +26,15 @@ where
 import Control.Concurrent.Async qualified as Async
 import Control.Concurrent.STM
 import Control.Exception (SomeException, throwIO, toException, try)
-import Control.Monad
 import Data.Aeson
 import Data.Map.Strict qualified as Map
 import Data.Maybe (fromMaybe)
 import Data.Text (Text)
 import Data.Text qualified as T
-import Data.Void (Void)
 import Network.MCP.Server.Types
 import Network.MCP.Transport.Types
 import Network.MCP.Types
-import UnliftIO qualified
+import UnliftIO.Async qualified as UnliftIO
 
 createServer :: ServerInfo -> ServerCapabilities -> Text -> IO Server
 createServer info caps instructions = do
@@ -99,21 +97,22 @@ registerPrompts server prompts = atomically $ writeTVar (serverPrompts server) p
 registerPromptHandler :: Server -> PromptHandler -> IO ()
 registerPromptHandler server handler = atomically $ writeTVar (serverPromptHandler server) (Just handler)
 
-runServerWithTransport :: (Transport t) => Server -> t -> IO Void
-runServerWithTransport server t = forever $ do
-  void . UnliftIO.tryAny $ handleMessagesForever t (handleMessage server)
+-- | Run the server, handling messages until the transport mechanism shuts down.
+runServerWithTransport :: (Transport t) => Server -> t -> IO ()
+runServerWithTransport server t =
+  handleMessages t (handleMessage server)
 
 -- | Run a transport server while the action is executed.
 -- If the action throws an exception or terminates the server will be stopped.
-withTransportServer :: (Transport t) => Server -> t -> IO a -> IO a
+withTransportServer :: (Transport t) => Server -> t -> (UnliftIO.Async () -> IO a) -> IO a
 withTransportServer server t action = do
   let runServer = do
         -- Run the server with the provided transport
         runServerWithTransport server t
-  Async.withAsync runServer $ \_ -> do
+  Async.withAsync runServer $ \handle -> do
     -- Execute the action with the server running
     -- The server will be terminated when the action completes
-    action
+    action handle
 
 -- Helper to process a message
 handleMessage :: Server -> Message -> IO (Maybe Message)

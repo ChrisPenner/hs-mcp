@@ -20,7 +20,6 @@ import Control.Exception (Exception)
 import Data.Aeson
 import Data.Aeson.Types
 import Data.Text (Text)
-import Data.Void (Void)
 import GHC.Generics
 
 -- JSON-RPC protocol constant
@@ -165,7 +164,9 @@ data TransportError = TransportError String
 -- | Transport interface for all transport implementations
 class Transport t where
   -- | Keep processing messages using the provided handler.
-  handleMessagesForever :: t -> (Message -> IO (Maybe Message)) -> IO Void
+  -- Will only return if the transport mechanism signals termination;
+  -- e.g. EOF on a socket or similar.
+  handleMessages :: t -> (Message -> IO (Maybe Message)) -> IO ()
 
 -- Helper function
 maybeToList :: Maybe a -> [a]

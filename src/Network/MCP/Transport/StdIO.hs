@@ -9,8 +9,7 @@ module Network.MCP.Transport.StdIO
   )
 where
 
-import Control.Exception (SomeException, handle, throwIO, toException)
-import Control.Monad (forever)
+import Control.Exception (SomeException, handle)
 import Data.Aeson
 import Data.ByteString.Char8 qualified as BS8
 import Data.ByteString.Lazy qualified as BL
@@ -43,24 +42,40 @@ newSTDIOTransport = do
 
 -- | A simple, synchronous transport implementation using standard input/output.
 instance Transport STDIOTransport where
-  handleMessagesForever (STDIOTransport {stdinHandle, stderrHandle, stdoutHandle}) handler = do
+  handleMessages (STDIOTransport {stdinHandle, stderrHandle, stdoutHandle}) handler = do
     hSetBuffering stdinHandle LineBuffering
     hSetBuffering stdoutHandle LineBuffering
     hSetEncoding stdinHandle utf8
     hSetEncoding stdoutHandle utf8
-    forever $ handle handleErr $ do
-      msg <- readMessage
-      handler msg >>= \case
-        Nothing -> pure ()
-        Just response -> sendMessage response
+    loop
     where
+      loop = do
+        handle handleErr $ do
+          readMessage >>= \case
+            Nothing ->
+              -- Transport is closed.
+              pure ()
+            Just msg -> do
+              handler msg >>= \case
+                Nothing -> loop
+                Just response -> do
+                  sendMessage response
+                  loop
+      readMessage :: IO (Maybe Message)
       readMessage = do
-        line <- BS8.hGetLine stdinHandle
-        case eitherDecode (BS8.fromStrict line) of
-          Left err ->
-            -- On parse error, log and try again with a default error message
-            throwIO $ toException $ userError ("JSON decode error: " ++ err)
-          Right msg -> pure msg
+        hIsEOF stdinHandle >>= \case
+          True -> do
+            -- If EOF is reached, return Nothing to signal termination
+            pure Nothing
+          False -> do
+            line <- BS8.hGetLine stdinHandle
+            case eitherDecode (BS8.fromStrict line) of
+              Left err -> do
+                -- On parse error, log and try again with a default error message
+                hPutStrLn stderrHandle ("JSON decode error: " ++ err)
+                -- Try again on the next line.
+                readMessage
+              Right msg -> pure . Just $ msg
 
       -- Send a message through the transport
       sendMessage msg = do
@@ -71,3 +86,4 @@ instance Transport STDIOTransport where
       handleErr :: SomeException -> IO ()
       handleErr err = do
         hPutStrLn stderrHandle $ "Error reading message: " ++ show err
+        loop
