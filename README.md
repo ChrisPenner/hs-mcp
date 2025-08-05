@@ -2,6 +2,10 @@
 
 A Haskell implementation of the [Model Context Protocol (MCP)](https://modelcontextprotocol.io/).
 
+**NOTE**: This is a fork of [Bryan Buecking](https://github.com/buecking/hs-mcp)'s original implementation.
+
+I've changed a lot in the interface, error handling, and also expose a simple `handleMessage` primitive which allows using an MCP server via an http interface, not just stdio.
+
 ## Overview
 
 MCP-Haskell (hs-mcp) provides a Haskell implementation of the Model Context Protocol, allowing Haskell applications to expose tools, resources, and prompts to MCP-compatible clients like Claude.
@@ -17,83 +21,16 @@ Key features:
 ## Installation
 
 ```bash
-# Clone the repository
-git clone github.com:buecking/hs-mcp.git
-cd hs-mcp
-
-# direnv
-# echo 'use flake' > .envrc
-direnv allow
-
-# nix
-nix develop
-
-# Build the project
-cabal build
+stack build
 ```
 
-## Usage
-
-### Creating a simple server
-
-```haskell
-import Network.MCP.Server
-import Network.MCP.Types
-import Network.MCP.Server.StdIO
-
-main :: IO ()
-main = do
-  -- Create server
-  let serverInfo = Implementation "my-server" "1.0.0"
-      serverCapabilities = ServerCapabilities
-        { resourcesCapability = Just $ ResourcesCapability True
-        , toolsCapability = Just $ ToolsCapability True
-        , promptsCapability = Nothing
-        }
-  
-  server <- createServer serverInfo serverCapabilities
-  
-  -- Register resources (optional)
-  let resource = Resource 
-        { resourceUri = "my://resource"
-        , resourceName = "My Resource"
-        , resourceDescription = Just "Description"
-        , resourceMimeType = Just "text/plain"
-        , resourceTemplate = Nothing
-        }
-  
-  registerResources server [resource]
-  
-  -- Register resource read handler
-  registerResourceReadHandler server $ \request -> do
-    -- Implement resource reading logic
-    ...
-
-  -- Register tools (optional)
-  let tool = Tool 
-        { toolName = "my-tool"
-        , toolDescription = Just "My tool"
-        , toolInputSchema = "{...}" -- JSON schema
-        }
-  
-  registerTools server [tool]
-  
-  -- Register tool call handler
-  registerToolCallHandler server $ \request -> do
-    -- Implement tool execution logic
-    ...
-  
-  -- Start the server with StdIO transport
-  runServerWithSTDIO server
-```
-
-### Example Server
+## Example Server
 
 The project includes an example echo server that demonstrates the MCP functionality:
 
 ```bash
 # Build and run the example server
-cabal run mcp-echo-server
+stack run mcp-echo-server
 ```
 
 You can test it with the [MCP Inspector](https://github.com/modelcontextprotocol/inspector) or Claude Desktop.
@@ -103,7 +40,7 @@ You can test it with the [MCP Inspector](https://github.com/modelcontextprotocol
 Run the test suite:
 
 ```bash
-cabal test
+stack test
 ```
 
 ## Protocol Compatibility
@@ -121,10 +58,6 @@ This implementation follows the [Model Context Protocol specification](https://s
 - `src/Network/MCP/Server/` - Server implementation
 - `Examples/` - Example implementations
 - `Test/` - Test suite
-
-## Contributing
-
-Contributions are welcome! Please feel free to submit a Pull Request.
 
 ## License
 
