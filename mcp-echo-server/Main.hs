@@ -1,6 +1,6 @@
 {-# LANGUAGE OverloadedStrings #-}
 
-module AppMain where
+module Main where
 
 import Data.Aeson (Value (..), fromJSON, Result(..))
 -- import System.IO (hPutStrLn, stderr)

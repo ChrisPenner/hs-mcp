@@ -1,6 +1,6 @@
 {-# LANGUAGE OverloadedStrings #-}
 
-module AppClient where
+module Client where
 
 import Data.Aeson
 import Network.MCP.Client

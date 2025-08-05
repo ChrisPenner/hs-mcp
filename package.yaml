@@ -21,9 +21,6 @@ description:         Please see the README on GitHub at <https://github.com/Chri
 
 library:
   source-dirs: src
-  when:
-    - condition: false
-      other-modules: Paths_hs_mcp
 
   dependencies:
     - base
@@ -50,14 +47,11 @@ tests:
       - stm
       - temporary
       - text
-    when:
-      - condition: false
-        other-modules: Paths_hs_mcp
 
 
 executables:
   mcp-echo-server:
-    source-dirs: app
+    source-dirs: mcp-echo-server
     main: Main.hs
     ghc-options: -threaded -rtsopts "-with-rtsopts=-I0 -N -qn4 -qg1 -T" -optP-Wno-nonportable-include-path
     dependencies:
@@ -68,8 +62,8 @@ executables:
       - text
 
   mcp-client:
-    source-dirs: app
-    main: Client.hs
+    source-dirs: mcp-client
+    main: Main.hs
     ghc-options: -threaded -rtsopts "-with-rtsopts=-I0 -N -qn4 -qg1 -T" -optP-Wno-nonportable-include-path
     dependencies:
       - base
