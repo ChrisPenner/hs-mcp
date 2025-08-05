@@ -2,24 +2,24 @@
 {-# LANGUAGE RecordWildCards #-}
 
 module Network.MCP.Server.StdIO
-  ( runServerWithSTDIO
-  ) where
+  ( runServerWithSTDIO,
+  )
+where
 
 import Control.Concurrent
-import Control.Monad
 import Control.Concurrent.STM
+import Control.Monad
 import Data.Aeson
+import qualified Data.ByteString.Lazy.Char8 as BLC
+import qualified Data.Text as T
 import Network.MCP.Server
 import Network.MCP.Transport.StdIO
 import Network.MCP.Transport.Types
 import System.IO
-import qualified Data.ByteString.Lazy.Char8 as BLC
-import qualified Data.Text as T
 
 -- | Run an MCP server using STDIO transport
 runServerWithSTDIO :: Server -> IO ()
 runServerWithSTDIO server = do
-
   -- Configure stdin/stdout for better performance
   hSetBuffering stdin LineBuffering
   hSetBuffering stdout LineBuffering
@@ -34,21 +34,19 @@ runServerWithSTDIO server = do
 
           -- Process the request
           handleServerRequest server request
-
         NotificationMessage notification -> do
           -- Log the received notification
           BLC.hPutStrLn stderr $ "Received notification: " <> encode notification
 
           -- Process the notification
           handleServerNotification server notification
-
         _ -> BLC.hPutStrLn stderr "Received unexpected message type"
 
   -- Create a channel for server-to-transport communication
   _messageQueue <- newTQueueIO
 
   -- Handle transport closure
-  let onClosed = putStrLn "STDIO transport closed"
+  let onClosed = BLC.hPutStrLn stderr "STDIO transport closed"
 
   -- Handle transport errors
   let onError err = BLC.hPutStrLn stderr $ "STDIO transport error: " <> BLC.pack (show err)
@@ -60,7 +58,7 @@ runServerWithSTDIO server = do
   runWithSTDIOTransport transport
 
   -- Wait for the server to complete (this won't happen with STDIO until the process is terminated)
-  forever $ threadDelay 1000000  -- 1 second
+  forever $ threadDelay 1000000 -- 1 second
 
 -- | Handle a server request
 handleServerRequest :: Server -> Request -> IO ()
@@ -73,19 +71,21 @@ handleServerRequest server request = do
     Right response -> do
       BLC.hPutStrLn stdout $ encode $ ResponseMessage response
       hFlush stdout
-
     Left err -> do
       -- Create an error response
-      let errorResponse = Response
-            { responseJsonrpc = JSONRPC "2.0"
-            , responseId = requestId request
-            , responseResult = Nothing
-            , responseError = Just $ ErrorResponse
-                { errorCode = -32603
-                , errorMessage = T.pack $ show err
-                , errorData = Nothing
-                }
-            }
+      let errorResponse =
+            Response
+              { responseJsonrpc = JSONRPC "2.0",
+                responseId = requestId request,
+                responseResult = Nothing,
+                responseError =
+                  Just $
+                    ErrorResponse
+                      { errorCode = -32603,
+                        errorMessage = T.pack $ show err,
+                        errorData = Nothing
+                      }
+              }
 
       BLC.hPutStrLn stdout $ encode $ ResponseMessage errorResponse
       hFlush stdout
