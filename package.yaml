@@ -1,0 +1,110 @@
+name: hs-mcp
+version:             0.1.1.0
+github: ChrisPenner/hs-mcp
+license:            BSD3
+license-file:       LICENSE
+homepage:           https://github.com/ChrisPenner/hs-mcp
+bug-reports:        https://github.com/ChrisPenner/hs-mcp/issues
+author:              "Chris Penner"
+maintainer:          "christopher.penner@gmail.com"
+copyright:           "2025 Chris Penner"
+
+extra-source-files:
+- README.md
+
+# Metadata used when publishing your package
+synopsis:            Library with tools for creating an MCP server implementation.
+category:            AI
+
+description:         Please see the README on GitHub at <https://github.com/ChrisPenner/hs-mcp#readme>
+
+
+library:
+  source-dirs: src
+  when:
+    - condition: false
+      other-modules: Paths_hs_mcp
+
+  dependencies:
+    - base
+    - aeson
+    - bytestring
+    - containers
+    - stm
+    - text
+    - process
+    - async
+
+tests:
+  mcp-test:
+    source-dirs: tests
+    main: Main.hs
+    ghc-options: -W -threaded -rtsopts "-with-rtsopts=-N -T" -v0
+    dependencies:
+      - base
+      - hs-mcp
+      - aeson
+      - bytestring
+      - containers
+      - HUnit
+      - stm
+      - temporary
+      - text
+    when:
+      - condition: false
+        other-modules: Paths_hs_mcp
+
+
+executables:
+  mcp-echo-server:
+    source-dirs: app
+    main: Main.hs
+    ghc-options: -threaded -rtsopts "-with-rtsopts=-I0 -N -qn4 -qg1 -T" -optP-Wno-nonportable-include-path
+    dependencies:
+      - base
+      - hs-mcp
+      - aeson
+      - containers
+      - text
+
+  mcp-client:
+    source-dirs: app
+    main: Client.hs
+    ghc-options: -threaded -rtsopts "-with-rtsopts=-I0 -N -qn4 -qg1 -T" -optP-Wno-nonportable-include-path
+    dependencies:
+      - base
+      - hs-mcp
+      - aeson
+      - containers
+
+default-extensions:
+  - ApplicativeDo
+  - BangPatterns
+  - BlockArguments
+  - ConstraintKinds
+  - DeriveAnyClass
+  - DeriveFunctor
+  - DeriveGeneric
+  - DeriveTraversable
+  - DerivingStrategies
+  - DerivingVia
+  - DoAndIfThenElse
+  - DuplicateRecordFields
+  - FlexibleContexts
+  - FlexibleInstances
+  - GeneralizedNewtypeDeriving
+  - ImportQualifiedPost
+  - LambdaCase
+  - MultiParamTypeClasses
+  - NamedFieldPuns
+  - OverloadedLabels
+  - OverloadedRecordDot
+  - OverloadedStrings
+  - PatternSynonyms
+  - RankNTypes
+  - ScopedTypeVariables
+  - StandaloneDeriving
+  - TupleSections
+  - TypeApplications
+  - TypeFamilies
+  - ViewPatterns
