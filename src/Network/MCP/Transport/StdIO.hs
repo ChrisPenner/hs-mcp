@@ -6,17 +6,14 @@
 module Network.MCP.Transport.StdIO
   ( STDIOTransport (..),
     newSTDIOTransport,
-    runWithSTDIOTransport,
   )
 where
 
-import Control.Concurrent
-import Control.Concurrent.STM
-import Control.Exception (SomeException, catch, handle, throwIO, toException)
-import Control.Monad (forever, void, when)
+import Control.Exception (SomeException, handle, throwIO, toException)
+import Control.Monad (forever)
 import Data.Aeson
-import qualified Data.ByteString.Char8 as BS8
-import qualified Data.ByteString.Lazy as BL
+import Data.ByteString.Char8 qualified as BS8
+import Data.ByteString.Lazy qualified as BL
 import Network.MCP.Transport.Types
 import System.IO
 
@@ -24,112 +21,53 @@ import System.IO
 data STDIOTransport = STDIOTransport
   { stdinHandle :: Handle,
     stdoutHandle :: Handle,
-    stderrHandle :: Handle,
-    messageQueue :: TQueue Message,
-    onReceiveMessage :: Message -> IO (),
-    onTransportClosed :: IO (),
-    onTransportError :: SomeException -> IO (),
-    transportClosed :: TVar Bool
+    stderrHandle :: Handle
   }
 
 -- | Create a new STDIO transport with the given message handler
 newSTDIOTransport ::
-  (Message -> IO ()) ->
-  IO () ->
-  (SomeException -> IO ()) ->
   IO STDIOTransport
-newSTDIOTransport onReceive onClosed onError = do
+newSTDIOTransport = do
   -- Configure handles for better performance
   hSetBuffering stdin LineBuffering
   hSetBuffering stdout LineBuffering
   hSetEncoding stdin utf8
   hSetEncoding stdout utf8
 
-  queue <- newTQueueIO
-  closed <- newTVarIO False
-
   return $
     STDIOTransport
       { stdinHandle = stdin,
         stdoutHandle = stdout,
-        stderrHandle = stderr,
-        messageQueue = queue,
-        onReceiveMessage = onReceive,
-        onTransportClosed = onClosed,
-        onTransportError = onError,
-        transportClosed = closed
+        stderrHandle = stderr
       }
 
--- | Start running the STDIO transport
-runWithSTDIOTransport :: STDIOTransport -> IO ()
-runWithSTDIOTransport transport = do
-  -- Start reader thread
-  void $
-    forkIO $
-      readThread transport `catch` \(e :: SomeException) -> do
-        BS8.hPutStrLn (stderrHandle transport) $ "Reader thread error: " <> BS8.pack (show e)
-        onTransportError transport e
-        atomically $ writeTVar (transportClosed transport) True
-        onTransportClosed transport
-
-  -- Start writer thread
-  void $
-    forkIO $
-      writeThread transport `catch` \(e :: SomeException) -> do
-        BS8.hPutStrLn (stderrHandle transport) $ "Writer thread error: " <> BS8.pack (show e)
-        onTransportError transport e
-        atomically $ writeTVar (transportClosed transport) True
-        onTransportClosed transport
-
-readThread :: STDIOTransport -> IO ()
-readThread transport = forever $ do
-  isClosed <- readTVarIO (transportClosed transport)
-  when isClosed $ return ()
-
-  -- Use Lazy ByteString version:
-  line <- BS8.hGetLine (stdinHandle transport)
-  case eitherDecode $ BS8.fromStrict line of
-    Left err -> do
-      BS8.hPutStrLn (stderrHandle transport) $ "Error decoding message: " <> BS8.pack err
-      -- onTransportError transport (userError $ "JSON decode error: " ++ err)
-      onTransportError transport (toException $ userError $ "JSON decode error: " ++ err)
-    Right msg -> onReceiveMessage transport msg
-
--- | Thread for writing to stdout
-writeThread :: STDIOTransport -> IO ()
-writeThread transport = forever $ do
-  isClosed <- readTVarIO (transportClosed transport)
-  when isClosed $ return ()
-
-  msg <- atomically $ readTQueue (messageQueue transport)
-  BL.hPut (stdoutHandle transport) (encode msg)
-  BL.hPut (stdoutHandle transport) "\n"
-  hFlush (stdoutHandle transport)
-
+-- | A simple, synchronous transport implementation using standard input/output.
 instance Transport STDIOTransport where
-  handleMessages transport handler = forever $ handle handleErr $ do
-    msg <- readMessage
-    handler msg >>= \case
-      Nothing -> pure ()
-      Just response -> sendMessage response
+  handleMessagesForever (STDIOTransport {stdinHandle, stderrHandle, stdoutHandle}) handler = do
+    hSetBuffering stdinHandle LineBuffering
+    hSetBuffering stdoutHandle LineBuffering
+    hSetEncoding stdinHandle utf8
+    hSetEncoding stdoutHandle utf8
+    forever $ handle handleErr $ do
+      msg <- readMessage
+      handler msg >>= \case
+        Nothing -> pure ()
+        Just response -> sendMessage response
     where
       readMessage = do
-        line <- BS8.hGetLine (stdinHandle transport)
+        line <- BS8.hGetLine stdinHandle
         case eitherDecode (BS8.fromStrict line) of
           Left err ->
             -- On parse error, log and try again with a default error message
             throwIO $ toException $ userError ("JSON decode error: " ++ err)
           Right msg -> pure msg
 
-      -- \| Send a message through the transport
+      -- Send a message through the transport
       sendMessage msg = do
-        isClosed <- readTVarIO (transportClosed transport)
-        if isClosed
-          then throwIO $ TransportError "Transport closed"
-          else do
-            atomically $ writeTQueue (messageQueue transport) msg
-            return $ ()
+        BL.hPut stdoutHandle (encode msg)
+        BL.hPut stdoutHandle "\n"
+        hFlush stdoutHandle
 
       handleErr :: SomeException -> IO ()
       handleErr err = do
-        hPutStrLn (stderrHandle transport) $ "Error reading message: " ++ show err
+        hPutStrLn stderrHandle $ "Error reading message: " ++ show err

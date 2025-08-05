@@ -10,6 +10,7 @@ import qualified Data.Text as T
 import Network.MCP.Server
 import Network.MCP.Server.StdIO
 import Network.MCP.Types
+import Data.Void 
 
 -- A simple echo server for demonstration purposes
 main :: IO ()
@@ -182,4 +183,4 @@ main = do
 
   -- Start the server with StdIO transport
   -- hPutStrLn stderr "Server initialized, waiting for connections..."
-  runServerWithSTDIO server
+  absurd <$> runServerWithSTDIO server
